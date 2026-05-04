@@ -84,3 +84,30 @@ L'anticipation excessive coûte très cher en développement logiciel, pour plus
 1. **La charge de maintenance (Dette technique) :** Chaque ligne de code ajoutée doit être lue, comprise, potentiellement documentée et migrée lors des montées de version. Ici, un nouveau développeur devra perdre du temps à comprendre à quoi sert `palantirChannelId` dans le modèle `Reservation`, pour finalement se rendre compte que ça ne sert à rien.
 2. **Le risque de bugs :** La classe `CryptoPaymentGateway` lance une `UnsupportedOperationException`. Si, par accident, un autre morceau du code finit par appeler ce service non testé, cela fera crasher l'application en production.
 3. **Le principe de réalité :** Le besoin métier évolue constamment. Si l'on anticipe aujourd'hui le paiement par GoblinCoin, il y a de fortes chances que dans 6 mois, lorsque le client voudra réellement un système de paiement, il choisisse la carte bancaire classique ou une autre cryptomonnaie. Tout le code spéculatif devra alors être jeté et réécrit.
+
+### TP SOLID
+
+ 1. **Appréciation globale de la base de code**
+
+Ce code est un "anti-pattern". On constate qu'il enfreint la quasi-totalité des principes de l'architecture logicielle moderne. La classe `TavernManager` est une "God Object" (Classe Dieu) qui sait tout faire et mélange de nombreux rôles, tandis que le reste du modèle est mal conçu, avec des abstractions cassées (exceptions jetées au lieu de renvoyer un booléen) et des dépendances dures créées directement au milieu des méthodes métier. Le code est rigide, fragile, difficilement testable et fortement couplé.
+
+2. **Évaluation des 5 principes SOLID**
+
+- **S - NON RESPECTÉ**
+    - **Justification :** Le contrôleur `TavernManager` fait le routage HTTP, vérifie et met à jour le stock (logique d'inventaire), calcule le total et les taxes (logique métier financière), gère l'heure pour les majorations, sauvegarde des notifications (accès aux données) via un composant SQL instancié en baldur, et s'occupe même de sysout et de stocker des variables "en mémoire" comme si c'était une base de données. Il a au moins 6 raisons de changer.
+- **O - NON RESPECTÉ **
+    - **Justification :** Dans `TavernManager`, le calcul des taxes inclut des conditions strictes (`if` à 22h, `if` Samedi). Si on ajoute une taxe le lundi, ou une taxe sur un article précis, il faudra modifier ce code existant qui gère déjà le routage HTTP au lieu de pouvoir simplement étendre ou injecter une nouvelle stratégie de taxe (ce qui requerrait une modification de classe et contredirait l'idée du "fermé à la modification").
+- **L - NON RESPECTÉ **
+    - **Justification :** Ce principe est clairement violé par `PoisonousDrink`. Une boisson empoisonnée hérite de `ConsumableItem`, mais au lieu de redéfinir `isSafeToConsume()` pour renvoyer `false` (conformément à l'attitude attendue d'un consommable), la classe déclenche une `RuntimeException`. Par conséquent, le polymorphisme casse le système existant ; le parcours d'une liste de `ConsumableItem` fera planter l'application à cause de cette déviation de comportement inattendue.
+- **I - NON RESPECTÉ**
+    - **Justification :** L'interface `IItemActions` est trop "large" (fat interface). Elle oblige l'implémentation de méthodes comme `cook()`, `pourIntoMug()`, `roast()`, `ferment()` et `distill()`. Une classe `Bière` sera contrainte de fournir un `.cook()` dénué de sens, et une classe `Steak` aura un `.distill()`. Les rôles d'un cuisinier et d'un brasseur devaient être séparés dans de plus petites interfaces.
+- **D - NON RESPECTÉ**
+    - **Justification :** Le `TavernManager` instancie explicitement une base de haut niveau dépendante d'un composant local: `SqlNotificationRepository repo = new SqlNotificationRepository();`. Le contrôleur dépend des implémentations (le mot _SQL_ en est le signe évident) au lieu d'une interface commune telle que `INotificationRepository`. Changer ce dépôt vers une solution dans le cloud ou vers un fichier impliquerait de recompiler et modifier le code de calcul métier.
+
+### 3. Difficultés anticipées lors de l'évolution du code
+
+Généralement, pour étendre ce code, de nombreux conflits surgiront.
+
+- **Ajout d'un nouveau type de notification (Email, Cloud) :** On sera forcé de supprimer explicitement ce `new SqlNotification...()` et d'éditer la logique des commandes qui en fait n'est en rien liée à de la notification, car le système s'articule autour des implémentations.
+- **Ajouter une promotion ou des taxes saisonnières :** Il va falloir rajouter de la logique de calcul conditionnel, allongeant considérablement la méthode dans `processOrder()` et complexifier ce qui est aujourd'hui un service HTTP, entraînant une illisibilité croissante et des tests de routage HTTP et règles financières croisés pénibles.
+- **Faire de la gestion de stock avancée :** En utilisant un simple dictionnaire ou cache local dans le contrôleur, ce composant est à usage unique qui ne permet ni partage avec différents composants, ne survivrait pas à une redondance serveur, et les actions comme des approvisionnements ne seraient pas gérables.

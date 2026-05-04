@@ -3,27 +3,26 @@ package com.taverne.solid.controller;
 import com.taverne.solid.model.ConsumableItem;
 import com.taverne.solid.model.OrderRequest;
 import com.taverne.solid.model.PoisonousDrink;
-import com.taverne.solid.repository.SqlNotificationRepository;
+import com.taverne.solid.services.InventoryService;
+import com.taverne.solid.services.OrderService;
+import com.taverne.solid.services.PricingService;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 public class TavernManager {
 
-    private final List<OrderRequest> orders = new ArrayList<>();
-    private final Map<String, Integer> stock = new HashMap<>() {{
-        put("ALE",   100);
-        put("BREAD",  50);
-        put("STEW",   30);
-    }};
+    private final InventoryService inventoryService;
+    private final PricingService pricingService;
+    private final OrderService orderService;
+
+    public TavernManager(InventoryService inventoryService, PricingService pricingService, OrderService orderService) {
+        this.inventoryService = inventoryService;
+        this.pricingService = pricingService;
+        this.orderService = orderService;
+    }
 
     @PostMapping("/api/order")
     public String processOrder(@RequestBody OrderRequest request) {
@@ -31,28 +30,17 @@ public class TavernManager {
         String item = request.getItem();
         int    qty  = request.getQty();
 
-        if (!stock.containsKey(item) || stock.get(item) < qty) {
+        if (!inventoryService.isStockAvailable(item, qty)) {
             return "Stock insuffisant";
         }
-        stock.put(item, stock.get(item) - qty);
 
-        double total = request.getPrice() * qty;
-        double tax   = total * 0.05;
+        inventoryService.decrementStock(item, qty);
 
-        if (LocalTime.now().getHour() >= 22) {
-            tax += total * 0.10;
-        }
-        if (LocalDate.now().getDayOfWeek() == DayOfWeek.SATURDAY) {
-            tax -= total * 0.05;
-        }
+        double finalPrice = pricingService.calculateTotalAmount(request.getPrice(), qty);
 
-        SqlNotificationRepository repo = new SqlNotificationRepository();
-        repo.save("Order: " + item + " x" + qty);
+        orderService.registerOrder(request);
 
-        System.out.println("[" + LocalDateTime.now() + "] Order processed: " + item);
-
-        orders.add(request);
-        return "Total = " + (total + tax) + " po";
+        return "Total = " + finalPrice + " po";
     }
 
     @GetMapping("/api/consume-check")
