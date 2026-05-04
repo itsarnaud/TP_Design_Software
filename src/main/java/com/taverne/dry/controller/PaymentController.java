@@ -1,6 +1,7 @@
 package com.taverne.dry.controller;
 
 import com.taverne.dry.model.PaymentRequest;
+import com.taverne.dry.service.PaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -8,25 +9,24 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/payment")
 public class PaymentController {
 
+    private final PaymentService paymentService;
+
+    public PaymentController(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
+
     @PostMapping("/warrior")
     public ResponseEntity<Double> calculateWarrior(@RequestBody PaymentRequest req) {
-        double base      = req.getPrice() * req.getQuantity();
-        double kingTax   = base * 0.05;
-        double surcharge = 2.0;
-        return ResponseEntity.ok(base + kingTax + surcharge);
+        return ResponseEntity.ok(paymentService.calculateWarrior(req));
     }
 
     @PostMapping("/mage")
     public ResponseEntity<Double> calculateMage(@RequestBody PaymentRequest req) {
-        double base = req.getPrice() * req.getQuantity();
-        // Les mages contournent le trésor royal
-        return ResponseEntity.ok(base);
+        return ResponseEntity.ok(paymentService.calculateMage(req));
     }
 
     @PostMapping("/rogue")
     public ResponseEntity<Double> calculateRogue(@RequestBody PaymentRequest req) {
-        double base    = req.getPrice() * req.getQuantity();
-        double kingTax = base * 0.05;
-        return ResponseEntity.ok(base + kingTax);
+        return ResponseEntity.ok(paymentService.calculateRogue(req));
     }
 }
