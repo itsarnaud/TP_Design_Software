@@ -27,8 +27,6 @@ public class TabController {
 
         DiscountType discount = (hasMeal && hasDrink) ? DiscountType.ADVENTURER : DiscountType.NONE;
 
-        String strategyType = (hasMeal && hasDrink) ? "ADVENTURER_MENU" : "NONE";
-
         return ResponseEntity.ok(calculatorService.calculate(request, discount));
     }
 }

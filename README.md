@@ -57,3 +57,30 @@ Les calculs récurrents doivent être isolés. Puisqu'il s'agit d'une petite API
 1. **Suppression de la duplication (DRY)** : Le calcul de base `getPrice() * getQuantity()` n'est défini qu'une seule fois. Si cette formule change, je ne modifie que la méthode `calculateBase`.
 2. **Centralisation de la Taxe du Roi** : L'extraction en constante et en méthode garantit que si la taxe change, on ne modifie la valeur qu'à **un seul endroit**. Tous les personnages affectés seront mis à jour mécaniquement.
 3. **Lisibilité** : Les actions des Endpoint de l'API deviennent très concises, exprimant directement la "formule" finale pour chaque classe, sans noyer la vue sous les calculs intermédiaires.
+
+### TP YAGNI
+
+1. **Constatations et appréciation globale du code livré**
+
+- On retrouve des services fantômes qui jettent des exceptions `UnsupportedOperationException`
+- Des méthodes vides ou qui renvoient des valeurs codées en dur (`WeatherIntegrationService`, points de terminaison `/vip` et `/weather-check` dans le contrôleur).
+- Un modèle de données (`Reservation`) surchargé d'attributs qui n'ont probablement aucun lien avec le besoin métier actuel.
+
+L'intention première (faire et lister des réservations) est noyée sous une montagne de fonctionnalités purement anticipées et non fonctionnelles.
+
+2. **Utilité et justification des fichiers et attributs**
+
+La très grande majorité de ce qui est présent **n'est pas justifiée**, car rien n'est effectivement achevé ni utilisé par la logique métier centrale :
+
+- **`CryptoPaymentGateway.java`** et **`WeatherIntegrationService.java`** : Totalement inutiles. Ces classes n'implémentent aucune vraie logique et ne sont même pas appelées correctement. Elles alourdissent le projet.
+- **`INotificationService.java`** : Des méthodes (`sendPalantirAlert`, `sendSmokeSignal`) qui relèvent de la pure fantaisie anticipative et n'ont aucune implémentation.
+- **`Reservation.java`**: Seuls les champs de base (`id`, `groupName`, `arrivalTime`, `guestCount`) sont justifiés pour une réservation standard. Tout le reste (`cryptoCurrency`, `weatherForecast`, `palantirChannelId`, `vipTier`, etc.) est du "bruit" qui complexifie inutilement la manipulation de l'objet et son éventuelle sauvegarde en base de données.
+- **`ReservationController.java`** : Les routes `/vip` et `/weather-check` sont injustifiées. Elles exposent aux clients de l'API des endpoints qui ne font strictement rien d'utile.
+
+3. **Que répondre à un développeur adepte du "plus on anticipe, mieux c'est" ?**
+
+L'anticipation excessive coûte très cher en développement logiciel, pour plusieurs raisons visibles directement dans ce code :
+
+1. **La charge de maintenance (Dette technique) :** Chaque ligne de code ajoutée doit être lue, comprise, potentiellement documentée et migrée lors des montées de version. Ici, un nouveau développeur devra perdre du temps à comprendre à quoi sert `palantirChannelId` dans le modèle `Reservation`, pour finalement se rendre compte que ça ne sert à rien.
+2. **Le risque de bugs :** La classe `CryptoPaymentGateway` lance une `UnsupportedOperationException`. Si, par accident, un autre morceau du code finit par appeler ce service non testé, cela fera crasher l'application en production.
+3. **Le principe de réalité :** Le besoin métier évolue constamment. Si l'on anticipe aujourd'hui le paiement par GoblinCoin, il y a de fortes chances que dans 6 mois, lorsque le client voudra réellement un système de paiement, il choisisse la carte bancaire classique ou une autre cryptomonnaie. Tout le code spéculatif devra alors être jeté et réécrit.
