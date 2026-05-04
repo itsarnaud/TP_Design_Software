@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .code-font { font-family: 'JetBrains Mono', monospace; }
+        .response-box { font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; word-break: break-all; }
+        .nav-link { transition: color 0.2s; }
+        .nav-link:hover { color: #60a5fa; }
+        .tp-badge { display:inline-flex;align-items:center;justify-content:center;width:2rem;height:2rem;border-radius:6px;font-size:0.9rem;font-weight:800;flex-shrink:0; }
+        input[type="number"], input[type="text"], select {
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.875rem;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus { border-color: #6366f1; box-shadow: 0 0 0 2px #e0e7ff; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border: none;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .btn:hover { opacity: 0.88; }
+        .btn:active { transform: scale(0.97); }
+        .status-ok   { background: #dcfce7; color: #166534; }
+        .status-err  { background: #fee2e2; color: #991b1b; }
+        .status-idle { background: #f1f5f9; color: #64748b; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+
+<!-- ══════ HEADER ══════ -->
+<header class="bg-slate-900 text-white shadow-xl sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-4 py-3">
+        <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🍺</span>
+                <div>
+                    <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Projet Starter — Interface de test</div>
+                    <h1 class="text-xl font-bold">La Pinte Joyeuse</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="server-status" class="text-xs px-3 py-1 rounded-full font-semibold bg-slate-700 text-slate-300">
+                    <i class="fa-solid fa-circle-notch fa-spin mr-1"></i>Connexion…
+                </span>
+            </div>
+        </div>
+        <nav class="flex space-x-4 text-xs font-semibold overflow-x-auto pb-1 whitespace-nowrap">
+            <a href="#kiss"   class="nav-link text-emerald-400"><span class="tp-badge bg-emerald-800 text-emerald-200 mr-1">K</span>KISS</a>
+            <a href="#dry"    class="nav-link text-blue-400"><span class="tp-badge bg-blue-800 text-blue-200 mr-1">D</span>DRY</a>
+            <a href="#yagni"  class="nav-link text-orange-400"><span class="tp-badge bg-orange-800 text-orange-200 mr-1">Y</span>YAGNI</a>
+            <a href="#solid"  class="nav-link text-violet-400"><span class="tp-badge bg-violet-800 text-violet-200 mr-1">S</span>SOLID</a>
+        </nav>
+    </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-6 flex-grow space-y-14">
+
+    <!-- ══════ KISS ══════ -->
+    <section id="kiss" class="scroll-mt-28">
+        <div class="flex items-center gap-3 mb-5">
+            <span class="tp-badge bg-emerald-600 text-white" style="width:3rem;height:3rem;font-size:1.4rem;border-radius:9999px;">K</span>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800">TP KISS</h2>
+                <p class="text-sm text-slate-500">Keep It Simple, Stupid</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Calcul addition -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 class="font-bold text-slate-700 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-receipt text-emerald-600"></i>
+                    POST /api/tab/calculate
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">Calcule le total d'une commande (réduction si repas + boisson)</p>
+
+                <div class="space-y-3 mb-4">
+                    <div id="kiss-items" class="space-y-2"></div>
+                    <button type="button" onclick="addKissItem()" class="btn bg-emerald-100 text-emerald-800 text-xs">
+                        <i class="fa-solid fa-plus"></i> Ajouter un article
+                    </button>
+                </div>
+
+                <button onclick="callKissCalculate()" class="btn bg-emerald-600 text-white w-full justify-center">
+                    <i class="fa-solid fa-paper-plane"></i> Envoyer
+                </button>
+                <div id="kiss-calc-resp" class="mt-3 rounded-lg p-3 text-xs response-box status-idle hidden"></div>
+            </div>
+
+            <!-- Beer recommender -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 class="font-bold text-slate-700 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-beer-mug-empty text-emerald-600"></i>
+                    POST /api/beer/recommend
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">Recommande une bière selon la préférence du client</p>
+
+                <label class="text-xs font-semibold text-slate-600 block mb-1">Préférence</label>
+                <select id="beer-light" class="mb-4">
+                    <option value="true">Blonde (légère)</option>
+                    <option value="false">Brune (forte)</option>
+                </select>
+
+                <button onclick="callBeerRecommend()" class="btn bg-emerald-600 text-white w-full justify-center">
+                    <i class="fa-solid fa-paper-plane"></i> Envoyer
+                </button>
+                <div id="kiss-beer-resp" class="mt-3 rounded-lg p-3 text-xs response-box status-idle hidden"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════ DRY ══════ -->
+    <section id="dry" class="scroll-mt-28 border-t pt-10">
+        <div class="flex items-center gap-3 mb-5">
+            <span class="tp-badge bg-blue-600 text-white" style="width:3rem;height:3rem;font-size:1.4rem;border-radius:9999px;">D</span>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800">TP DRY</h2>
+                <p class="text-sm text-slate-500">Don't Repeat Yourself — 3 routes de paiement</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="text-xs font-semibold text-slate-600 block mb-1">Prix (po)</label>
+                    <input type="number" id="dry-price" value="10" min="0" step="0.5">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600 block mb-1">Quantité</label>
+                    <input type="number" id="dry-qty" value="3" min="1">
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <button onclick="callPayment('warrior')" class="btn bg-red-700 text-white justify-center">
+                    <i class="fa-solid fa-shield-halved"></i> Guerrier
+                </button>
+                <button onclick="callPayment('mage')" class="btn bg-indigo-700 text-white justify-center">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Mage
+                </button>
+                <button onclick="callPayment('rogue')" class="btn bg-slate-700 text-white justify-center">
+                    <i class="fa-solid fa-user-ninja"></i> Voleur
+                </button>
+            </div>
+        </div>
+
+        <div id="dry-resp" class="rounded-lg p-3 text-xs response-box status-idle hidden"></div>
+
+        <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+            <strong>Valeurs attendues</strong> pour prix=10, qté=3 :
+            Guerrier = <code class="bg-blue-100 px-1 rounded">33.5</code> po ·
+            Mage = <code class="bg-blue-100 px-1 rounded">30.0</code> po ·
+            Voleur = <code class="bg-blue-100 px-1 rounded">31.5</code> po
+        </div>
+    </section>
+
+    <!-- ══════ YAGNI ══════ -->
+    <section id="yagni" class="scroll-mt-28 border-t pt-10">
+        <div class="flex items-center gap-3 mb-5">
+            <span class="tp-badge bg-orange-600 text-white" style="width:3rem;height:3rem;font-size:1.4rem;border-radius:9999px;">Y</span>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800">TP YAGNI</h2>
+                <p class="text-sm text-slate-500">You Aren't Gonna Need It — Réservations</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Créer réservation -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 class="font-bold text-slate-700 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-plus text-orange-600"></i>
+                    POST /api/reservations
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">Créer une réservation</p>
+
+                <div class="space-y-3 mb-4">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600 block mb-1">Nom du groupe</label>
+                        <input type="text" id="yagni-group" value="Les Paladins">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600 block mb-1">Date / heure d'arrivée</label>
+                        <input type="text" id="yagni-arrival" value="2025-12-24T20:00:00" placeholder="YYYY-MM-DDTHH:MM:SS">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600 block mb-1">Nombre de personnes (1–10)</label>
+                        <input type="number" id="yagni-count" value="4" min="1" max="15">
+                    </div>
+                </div>
+
+                <button onclick="callCreateReservation()" class="btn bg-orange-600 text-white w-full justify-center">
+                    <i class="fa-solid fa-paper-plane"></i> Réserver
+                </button>
+                <div id="yagni-create-resp" class="mt-3 rounded-lg p-3 text-xs response-box status-idle hidden"></div>
+            </div>
+
+            <!-- Lister réservations -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 class="font-bold text-slate-700 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-list text-orange-600"></i>
+                    GET /api/reservations
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">Lister toutes les réservations en mémoire</p>
+
+                <button onclick="callListReservations()" class="btn bg-orange-600 text-white w-full justify-center">
+                    <i class="fa-solid fa-rotate"></i> Récupérer la liste
+                </button>
+                <div id="yagni-list-resp" class="mt-3 rounded-lg p-3 text-xs response-box status-idle hidden"></div>
+            </div>
+        </div>
+
+        <!-- Routes YAGNI à supprimer -->
+        <div class="mt-4 bg-red-50 border border-red-200 rounded-lg p-4 text-xs">
+            <p class="font-bold text-red-800 mb-2"><i class="fa-solid fa-trash mr-1"></i>Routes à supprimer (violations YAGNI)</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <button onclick="callYagniDead('/api/reservations/vip')" class="btn bg-red-100 text-red-700 justify-center">
+                    GET /api/reservations/vip
+                </button>
+                <button onclick="callYagniDead('/api/reservations/weather-check?date=2025-06-01')" class="btn bg-red-100 text-red-700 justify-center">
+                    GET /api/reservations/weather-check
+                </button>
+            </div>
+            <div id="yagni-dead-resp" class="mt-2 rounded-lg p-3 response-box status-idle hidden"></div>
+            <p class="text-red-700 mt-2">Après votre refactoring, ces routes doivent retourner <strong>404</strong>.</p>
+        </div>
+    </section>
+
+    <!-- ══════ SOLID ══════ -->
+    <section id="solid" class="scroll-mt-28 border-t pt-10">
+        <div class="flex items-center gap-3 mb-5">
+            <span class="tp-badge bg-violet-600 text-white" style="width:3rem;height:3rem;font-size:1.4rem;border-radius:9999px;">S</span>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800">TP SOLID</h2>
+                <p class="text-sm text-slate-500">God Class — 5 principes à refactorer</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Commander -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 class="font-bold text-slate-700 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-cart-shopping text-violet-600"></i>
+                    POST /api/order
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">Passer une commande (stock limité)</p>
+
+                <div class="space-y-3 mb-4">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600 block mb-1">Article</label>
+                        <select id="solid-item">
+                            <option value="ALE">ALE (stock : 100)</option>
+                            <option value="BREAD">BREAD (stock : 50)</option>
+                            <option value="STEW">STEW (stock : 30)</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 block mb-1">Quantité</label>
+                            <input type="number" id="solid-qty" value="2" min="1">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 block mb-1">Prix unitaire (po)</label>
+                            <input type="number" id="solid-price" value="5.0" min="0" step="0.5">
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="callOrder()" class="btn bg-violet-600 text-white w-full justify-center">
+                    <i class="fa-solid fa-paper-plane"></i> Commander
+                </button>
+                <div id="solid-order-resp" class="mt-3 rounded-lg p-3 text-xs response-box status-idle hidden"></div>
+            </div>
+
+            <!-- Consume check (LSP) -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 class="font-bold text-slate-700 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-flask text-violet-600"></i>
+                    GET /api/consume-check
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">
+                    Teste la violation LSP — <code class="bg-slate-100 px-1 rounded">PoisonousDrink</code> lance une
+                    <code class="bg-slate-100 px-1 rounded">RuntimeException</code> au lieu de retourner <code class="bg-slate-100 px-1 rounded">false</code>
+                </p>
+
+                <button onclick="callConsumeCheck()" class="btn bg-violet-600 text-white w-full justify-center">
+                    <i class="fa-solid fa-rotate"></i> Appeler (crash attendu avant refactoring)
+                </button>
+                <div id="solid-lsp-resp" class="mt-3 rounded-lg p-3 text-xs response-box status-idle hidden"></div>
+                <p class="text-xs text-slate-400 mt-2">Après correction LSP : la réponse doit être <code>safe / danger</code> sans exception.</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer class="bg-slate-900 text-slate-400 text-xs text-center py-4 mt-12">
+    EPSI — Analyse de code &amp; maintenabilité · La Pinte Joyeuse · <span id="footer-url">http://localhost:8080</span>
+</footer>
+
+<script>
+// ══════════════════════════════════════════════
+//  Utilitaires
+// ══════════════════════════════════════════════
+
+function showResp(id, status, body) {
+    const el = document.getElementById(id);
+    el.classList.remove('hidden', 'status-ok', 'status-err', 'status-idle');
+    if (status >= 200 && status < 300) {
+        el.classList.add('status-ok');
+        el.textContent = `HTTP ${status}\n\n${typeof body === 'string' ? body : JSON.stringify(body, null, 2)}`;
+    } else {
+        el.classList.add('status-err');
+        el.textContent = `HTTP ${status}\n\n${typeof body === 'string' ? body : JSON.stringify(body, null, 2)}`;
+    }
+}
+
+async function post(url, body) {
+    const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const text = await r.text();
+    let parsed;
+    try { parsed = JSON.parse(text); } catch { parsed = text; }
+    return { status: r.status, body: parsed };
+}
+
+async function get(url) {
+    const r = await fetch(url);
+    const text = await r.text();
+    let parsed;
+    try { parsed = JSON.parse(text); } catch { parsed = text; }
+    return { status: r.status, body: parsed };
+}
+
+// ══════════════════════════════════════════════
+//  Vérification serveur
+// ══════════════════════════════════════════════
+
+async function checkServer() {
+    const el = document.getElementById('server-status');
+    try {
+        const r = await fetch('/api/reservations');
+        if (r.ok || r.status === 200) {
+            el.className = 'text-xs px-3 py-1 rounded-full font-semibold bg-emerald-800 text-emerald-200';
+            el.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i>Serveur OK :8080';
+        }
+    } catch {
+        el.className = 'text-xs px-3 py-1 rounded-full font-semibold bg-red-900 text-red-200';
+        el.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1"></i>Serveur hors ligne';
+    }
+}
+
+// ══════════════════════════════════════════════
+//  KISS — Calcul addition
+// ══════════════════════════════════════════════
+
+let kissItemCount = 0;
+
+function addKissItem() {
+    kissItemCount++;
+    const container = document.getElementById('kiss-items');
+    const id = `kiss-item-${kissItemCount}`;
+    const div = document.createElement('div');
+    div.id = id;
+    div.className = 'flex gap-2 items-end';
+    div.innerHTML = `
+        <div class="flex-1">
+            <label class="text-xs font-semibold text-slate-600 block mb-1">Nom</label>
+            <input type="text" class="kiss-name" placeholder="Ale" value="${kissItemCount === 1 ? 'Ale' : kissItemCount === 2 ? 'Ragoût' : ''}">
+        </div>
+        <div class="w-24">
+            <label class="text-xs font-semibold text-slate-600 block mb-1">Prix</label>
+            <input type="number" class="kiss-price" value="${kissItemCount === 1 ? '5' : '8'}" min="0" step="0.5">
+        </div>
+        <div class="w-28">
+            <label class="text-xs font-semibold text-slate-600 block mb-1">Type</label>
+            <select class="kiss-type">
+                <option value="DRINK" ${kissItemCount === 1 ? 'selected' : ''}>DRINK</option>
+                <option value="MEAL"  ${kissItemCount === 2 ? 'selected' : ''}>MEAL</option>
+            </select>
+        </div>
+        <button onclick="document.getElementById('${id}').remove()" class="btn bg-red-100 text-red-600 px-2 mb-0.5">
+            <i class="fa-solid fa-xmark"></i>
+        </button>`;
+    container.appendChild(div);
+}
+
+async function callKissCalculate() {
+    const rows = document.getElementById('kiss-items').querySelectorAll('.kiss-name');
+    if (rows.length === 0) { alert('Ajoutez au moins un article.'); return; }
+
+    const items = [];
+    document.getElementById('kiss-items').querySelectorAll('[id^="kiss-item-"]').forEach(row => {
+        items.push({
+            name:  row.querySelector('.kiss-name').value,
+            price: parseFloat(row.querySelector('.kiss-price').value),
+            type:  row.querySelector('.kiss-type').value
+        });
+    });
+
+    const r = await post('/api/tab/calculate', { items });
+    showResp('kiss-calc-resp', r.status, r.body);
+}
+
+async function callBeerRecommend() {
+    const light = document.getElementById('beer-light').value === 'true';
+    const r = await post('/api/beer/recommend', { light });
+    showResp('kiss-beer-resp', r.status, r.body);
+}
+
+// ══════════════════════════════════════════════
+//  DRY — Paiement
+// ══════════════════════════════════════════════
+
+async function callPayment(guild) {
+    const price = parseFloat(document.getElementById('dry-price').value);
+    const quantity = parseInt(document.getElementById('dry-qty').value);
+    const r = await post(`/api/payment/${guild}`, { price, quantity });
+    showResp('dry-resp', r.status, r.body);
+}
+
+// ══════════════════════════════════════════════
+//  YAGNI — Réservations
+// ══════════════════════════════════════════════
+
+async function callCreateReservation() {
+    const body = {
+        groupName:   document.getElementById('yagni-group').value,
+        arrivalTime: document.getElementById('yagni-arrival').value,
+        guestCount:  parseInt(document.getElementById('yagni-count').value)
+    };
+    const r = await post('/api/reservations', body);
+    showResp('yagni-create-resp', r.status, r.body);
+}
+
+async function callListReservations() {
+    const r = await get('/api/reservations');
+    showResp('yagni-list-resp', r.status, r.body);
+}
+
+async function callYagniDead(url) {
+    const r = await get(url);
+    showResp('yagni-dead-resp', r.status, r.body);
+}
+
+// ══════════════════════════════════════════════
+//  SOLID — Commandes
+// ══════════════════════════════════════════════
+
+async function callOrder() {
+    const body = {
+        item:  document.getElementById('solid-item').value,
+        qty:   parseInt(document.getElementById('solid-qty').value),
+        price: parseFloat(document.getElementById('solid-price').value)
+    };
+    const r = await post('/api/order', body);
+    showResp('solid-order-resp', r.status, r.body);
+}
+
+async function callConsumeCheck() {
+    const r = await get('/api/consume-check');
+    showResp('solid-lsp-resp', r.status, r.body);
+}
+
+// ══════════════════════════════════════════════
+//  Init
+// ══════════════════════════════════════════════
+checkServer();
+addKissItem();
+addKissItem();
+</script>
+
+</body>
+</html>
